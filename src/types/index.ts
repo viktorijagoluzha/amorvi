@@ -8,6 +8,11 @@ export interface User {
   followers?: number;
   following?: number;
   likes?: number;
+  city?: string;
+  jobTitle?: string;
+  education?: string;
+  interests?: string[];
+  additionalInfo?: string[];
   location?: {
     latitude: number;
     longitude: number;
@@ -27,4 +32,28 @@ export interface Message {
   text: string;
   senderId: string;
   timestamp: Date;
+}
+
+export interface NearbyUser {
+  id: string;
+  name: string;
+  distance: number;
+  age: number;
+}
+
+export interface FeedComment {
+  id: string;
+  author: string;
+  text: string;
+}
+
+export interface FeedPost {
+  id: string;
+  user: User;
+  text: string;
+  mediaUrl: string;
+  mediaType: 'photo' | 'video';
+  likes: number;
+  likedByCurrentUser: boolean;
+  comments: FeedComment[];
 }

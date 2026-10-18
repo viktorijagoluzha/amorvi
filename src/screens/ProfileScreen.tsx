@@ -11,6 +11,7 @@ import {
   Alert,
   PermissionsAndroid,
   Platform,
+  ActionSheetIOS,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -20,11 +21,13 @@ import { AddStoryModal } from '../components/AddStoryModal';
 import { StoryViewer } from '../components/StoryViewer';
 import { ChangeProfilePictureModal } from '../components/ChangeProfilePictureModal';
 import { AlbumItemViewer } from '../components/AlbumItemViewer';
+import { usePost } from '../context/PostContextV2';
 
 const { width } = Dimensions.get('window');
 const imageSize = (width - 60) / 3;
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }: { navigation?: any }) => {
+  const { deletePost } = usePost();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
@@ -39,6 +42,11 @@ const ProfileScreen = () => {
     name: currentUser.name,
     age: currentUser.age,
     bio: currentUser.bio,
+    city: currentUser.city || '',
+    jobTitle: currentUser.jobTitle || '',
+    education: currentUser.education || '',
+    interests: currentUser.interests || [],
+    additionalInfo: currentUser.additionalInfo || [],
   });
   const [profileImage, setProfileImage] = useState(currentUser.images[0]);
   const [albumItems, setAlbumItems] = useState<
@@ -111,15 +119,61 @@ const ProfileScreen = () => {
     setShowAlbumViewer(true);
   };
 
+  const handleDeleteAlbumItem = (index: number) => {
+    Alert.alert(
+      'Delete Item',
+      'Are you sure you want to delete this item from your album?',
+      [
+        { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+        {
+          text: 'Delete',
+          onPress: () => {
+            setAlbumItems(albumItems.filter((_, i) => i !== index));
+            Alert.alert('Success', 'Item deleted from album!');
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+  };
+
+  const handleDeleteStory = () => {
+    Alert.alert(
+      'Delete Story',
+      'Are you sure you want to delete your story?',
+      [
+        { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+        {
+          text: 'Delete',
+          onPress: () => {
+            setStory(null);
+            Alert.alert('Success', 'Story deleted!');
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+  };
+
   const handleSaveProfile = (data: {
     name: string;
     age: string;
     bio: string;
+    city: string;
+    jobTitle: string;
+    education: string;
+    interests: string[];
+    additionalInfo: string[];
   }) => {
     setUserData({
       name: data.name,
       age: parseInt(data.age),
       bio: data.bio,
+      city: data.city,
+      jobTitle: data.jobTitle,
+      education: data.education,
+      interests: data.interests,
+      additionalInfo: data.additionalInfo,
     });
     Alert.alert('Success', 'Profile updated successfully!');
   };
@@ -148,7 +202,9 @@ const ProfileScreen = () => {
           style={styles.headerGradient}
         >
           <View style={styles.headerTop}>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation?.navigate('Settings')}
+            >
               <Icon name="settings-outline" size={28} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -234,13 +290,69 @@ const ProfileScreen = () => {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => setShowEditModal(true)}
+            onPress={() => navigation?.navigate('EditProfile')}
           >
             <View style={styles.actionButtonOutline}>
               <Icon name="create-outline" size={24} color="#000" />
               <Text style={styles.actionButtonTextDark}>Edit Profile</Text>
             </View>
           </TouchableOpacity>
+        </View>
+
+        {/* Profile Details */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Basic Info</Text>
+          </View>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>City</Text>
+              <Text style={styles.infoValue}>{userData.city || 'Not set'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Work</Text>
+              <Text style={styles.infoValue}>{userData.jobTitle || 'Not set'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Education</Text>
+              <Text style={styles.infoValue}>{userData.education || 'Not set'}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Interests</Text>
+          </View>
+          <View style={styles.chipRow}>
+            {userData.interests.length > 0 ? (
+              userData.interests.map((interest, index) => (
+                <View key={index} style={styles.chip}>
+                  <Text style={styles.chipText}>{interest}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.infoValue}>No interests added yet.</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Additional Info</Text>
+          </View>
+          <View style={styles.infoCard}>
+            {userData.additionalInfo.length > 0 ? (
+              userData.additionalInfo.map((item, index) => (
+                <View key={index} style={styles.infoListItem}>
+                  <Icon name="star" size={16} color="#FF1493" />
+                  <Text style={styles.infoListText}>{item}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.infoValue}>No additional details yet.</Text>
+            )}
+          </View>
         </View>
 
         {/* Albums Section */}
@@ -259,18 +371,25 @@ const ProfileScreen = () => {
 
           <View style={styles.albumsGrid}>
             {albumItems.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.albumItem}
-                onPress={() => handleViewAlbumItem(item)}
-              >
-                <Image source={{ uri: item.uri }} style={styles.albumImage} />
-                {item.type === 'video' && (
-                  <View style={styles.albumOverlay}>
-                    <Icon name="play" size={30} color="#FFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
+              <View key={index} style={{ position: 'relative' }}>
+                <TouchableOpacity
+                  style={styles.albumItem}
+                  onPress={() => handleViewAlbumItem(item)}
+                >
+                  <Image source={{ uri: item.uri }} style={styles.albumImage} />
+                  {item.type === 'video' && (
+                    <View style={styles.albumOverlay}>
+                      <Icon name="play" size={30} color="#FFF" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteAlbumItemButton}
+                  onPress={() => handleDeleteAlbumItem(index)}
+                >
+                  <Icon name="trash-outline" size={16} color="#FF6B9D" />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         </View>
@@ -331,6 +450,8 @@ const ProfileScreen = () => {
           story={story}
           userName={userData.name}
           userAge={userData.age}
+          isOwnStory={true}
+          onDelete={handleDeleteStory}
         />
       )}
     </View>
@@ -508,6 +629,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
+  infoCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F7F7F7',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#111',
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFF0F6',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFDAE6',
+  },
+  chipText: {
+    color: '#C2185B',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  infoListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  infoListText: {
+    color: '#333',
+    fontSize: 14,
+    flex: 1,
+    flexWrap: 'wrap',
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -552,6 +729,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deleteAlbumItemButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: '#FFF',
+    borderRadius: 50,
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   albumViews: {
     color: '#FFF',
